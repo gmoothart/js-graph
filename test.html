@@ -1,0 +1,99 @@
+<!doctype html>
+<html>
+<head>
+	<link src="qunit-git.css"></link>
+</head>
+<body>
+    <h2>Shortest Paths</h2>
+    <script type="text/javascript" src="jquery-1.7.1.js"></script>
+    <script type="text/javascript" src="qunit-git.js"></script>
+    <script type="text/javascript">
+	(function() {
+        "use strict";
+	
+        function createNode(name, children) {
+	
+	    return {
+	        name: '',
+	        children: children || []
+	    }
+	};
+	
+	/**
+		createPath - immutable path data structure.
+		`add` does not modify the current instance, it 
+		returns a new instance with the new node added
+	*/
+	function createPath(arr) {
+	    var _arr = arr || [];
+	
+	    return {
+	        contains: function(node) {
+		    return _arr.indexOf(node) !== -1;
+		},
+		add: function(node) {
+		    var a = _arr.slice(0)
+		                .push(node);
+		    return createPath(a);
+		},
+		get: function() {
+		    return _arr.slice(0);
+		}
+		
+	    };
+	}
+	
+	function allPaths(node, dest) {
+	
+		var paths = [];
+		_allPaths(node, dest, createPath());
+		return paths;
+	
+		function _allPaths(node, dest, path) {
+			var i, newPath;
+
+			// abort traversal if we're in a loop
+			if (path.contains(node)) {
+				return;
+			}
+
+			newPath = path.add(node);
+			if (node === dest) {
+				// abort traversal and return the 
+				paths.push(newPath);
+				return;
+			}
+
+			for(i=0; i < node.children.length; i++) {
+				allPaths(node.children[i], dest, newPath);
+			}
+		}
+	}
+	
+	var n = createNode("s", [
+		createNode("1", []),
+		createNode("2", []),
+	]);
+	var src =  createNode("dest");
+	
+	allPaths(n, src);
+
+	
+	/*
+		QUnit tests
+		http://docs.jquery.com/QUnit
+	*/
+	test("should return single node if src and dest are equal", function() {
+		var n = createNode("s"),
+		    paths;
+		    
+		paths = allPaths(n, n);
+		
+		equal(paths.length, 1);
+		equal(paths.get().length, 1);
+		equal(paths.get()[0].name, "s");
+	});
+	})();	
+    </script>
+</body>
+</html>
