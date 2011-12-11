@@ -2,9 +2,17 @@
 <html>
 <head>
     <link href="qunit-git.css" type="text/css" rel="stylesheet" />
+    <style type="text/css">
+
+    </style>
 </head>
 <body>
-    <h2>Shortest/All Paths</h2>
+    <h2>All Paths</h2>
+    <div id="allPathsCt"></div>
+    <div id="allPaths"></div>
+    <h2>Shortest Path(s)</h2>
+    <div id="shortPathsCt"></div>
+    <div id="shortPaths"></div>
     <h1 id="qunit-header">QUnit example</h1>  
     <h2 id="qunit-banner"></h2>  
     <h2 id="qunit-userAgent"></h2>  
@@ -36,13 +44,13 @@
                         name: _name,
                         children: _children,
                         hasChild: function(c) {
-                            return _children.indexOf(c) !== -1;
+                            return that.children.indexOf(c) !== -1;
                         },
                         add: function(c) {
                             // edges need to be bi-directional, so add to
                             // children too
                             if (!that.hasChild(c)) {
-                                _children.push(c);
+                                that.children.push(c);
                             }
                             if (!c.hasChild(that)) {
                                 c.children.push(that);
@@ -51,7 +59,7 @@
                         toString: function() { return _name; }
                     };
 
-                $.each(_children, function(i,c) {
+                $.each(that.children, function(i,c) {
                     that.add(c);
                 });
 
@@ -110,6 +118,28 @@
                 }
             }
 
+            /**
+              create random edges among a list of edges,
+              creating an edge between any two nodes 
+              with probability p
+            */
+            function randomizeGraph(p, nodeArr) {
+
+                // start fresh
+                $.each(nodeArr, function(i,n) {
+                    n.children = [];
+                });
+
+                // add edges randomly
+                $.each(nodeArr, function(i,n) {
+                    var j;
+                    for(j=i+1; j < nodeArr.length; j++) {
+                        if (Math.random() < p) {
+                            n.add(nodeArr[j]);
+                        }
+                    }
+                });
+            }
 
 
             /*
@@ -121,7 +151,49 @@
 
                 equal(n.name, "foo");
             });
-            test("should return single node if src and dest are equal", function () {
+            test("randomizeGraph creates no edges for p=0", function() {
+
+                var na = [
+                        createNode("s"),
+                        createNode("d"),
+                        createNode("1"),
+                        createNode("2"),
+                        createNode("3"),
+                        createNode("4"),
+                        createNode("5"),
+                        createNode("6"),
+                    ];
+                    
+                    randomizeGraph(0, na);
+
+                    $.each(na, function(i,n) {
+                        equal(0, n.children.length);
+                    });
+
+            });
+            test("randomizeGraph creates proper distribution for p=0.1", function() {
+
+            });
+            test("randomizeGraph creates fully connected graph for p=1", function() {
+                var na = [
+                        createNode("s"),
+                        createNode("d"),
+                        createNode("1"),
+                        createNode("2"),
+                        createNode("3"),
+                        createNode("4"),
+                        createNode("5"),
+                        createNode("6"),
+                    ];
+                    
+                    randomizeGraph(1, na);
+
+                    $.each(na, function(i,n) {
+                        equal(na.length-1, n.children.length);
+                    });
+
+            });
+            test("allPaths should return single node if src and dest are equal", function () {
                 var n = createNode("s"),
                     paths;
 
@@ -131,7 +203,7 @@
                 equal(paths[0].get().length, 1);
                 equal(paths[0].get()[0].name, "s");
             });
-            test("handles loops correctly", function() {
+            test("allPaths handles loops correctly", function() {
 
                 var d = createNode("d"),
                     n = createNode("s", [
@@ -151,7 +223,14 @@
 
                 paths = allPaths(n, d);
 
+                // correct # paths?
                 equal(paths.length, 4);
+
+                // each path starts with 'n' and ends with 'd'?
+                $.each(paths, function(i,p) {
+                    equal('s', p.get()[0].name);
+                    equal('d', p.get()[ p.get().length-1 ].name);
+                });
             });
         })();
     </script>
