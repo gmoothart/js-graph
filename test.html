@@ -3,6 +3,16 @@
 <head>
     <link href="qunit-git.css" type="text/css" rel="stylesheet" />
     <style type="text/css">
+        #allPaths p, #shortPaths p {
+            margin-top: 0px;
+            margin-bottom: 0px;
+        }
+
+        #allPaths, #shortPaths {
+            height: 300px;
+            width: 300px;
+            overflow: auto;
+        }
 
     </style>
 </head>
@@ -14,6 +24,11 @@
     <div id="shortPathsCt"></div>
     <div id="shortPaths"></div>
 
+    <div id="graphContainer">
+
+
+    </div>
+
 
     <div style="width:500px;">
     <h1 id="qunit-header">QUnit tests</h1>  
@@ -24,9 +39,12 @@
 
     <script type="text/javascript" src="jquery-1.7.1.js"></script>
     <script type="text/javascript" src="qunit-git.js"></script>
+    <script type="text/javascript" src="raphael.js"></script>
     <script type="text/javascript">
         (function () {
             "use strict";
+
+
             /*
               to do:
              * create graph randomizer
@@ -100,7 +118,7 @@
                             s = _arr[0].name;
                         }
                         for(i=1; i < _arr.length; i++) {
-                            s = s + " -> " + _arr[i].name;
+                            s = s + "&rarr;" + _arr[i].name;
                         }
 
                         return s;
@@ -158,6 +176,53 @@
                 });
             }
 
+            function drawGraph(nodes) {
+
+              var width=640,
+                  height=480,
+                  r = Raphael("graphContainer", width, height),
+                  angle = 0
+                  i;
+
+              $.each(nodes, function(i,n) {
+                  var c = Raphael.getColor(),
+                      t = "r" + angle + " 320 240";
+
+                  r.circle(320, 450, 20).attr({stroke: c, fill: c, transform: t, "fill-opacity": .4}).click(function () {
+                      s.animate({transform: t, stroke: c}, 2000, "bounce");
+                  }).mouseover(function () {
+                      this.animate({"fill-opacity": .75}, 500);
+                  }).mouseout(function () {
+                      this.animate({"fill-opacity": .4}, 500);
+                  });
+
+                  // increment length the appropriate amount
+                  angle = angle + (360 / nodes.length);
+              });
+
+              /*
+                while (angle < 360) {
+                    var color = Raphael.getColor();
+                    (function (t, c) {
+                        r.circle(320, 450, 20).attr({stroke: c, fill: c, transform: t, "fill-opacity": .4}).click(function () {
+                            s.animate({transform: t, stroke: c}, 2000, "bounce");
+                        }).mouseover(function () {
+                            this.animate({"fill-opacity": .75}, 500);
+                        }).mouseout(function () {
+                            this.animate({"fill-opacity": .4}, 500);
+                        });
+                    })("r" + angle + " 320 240", color);
+                    angle += 30;
+                }
+                Raphael.getColor.reset();
+                var s = r.set();
+                s.push(r.path("M320,240c-50,100,50,110,0,190").attr({fill: "none", "stroke-width": 2}));
+                s.push(r.circle(320, 450, 20).attr({fill: "none", "stroke-width": 2}));
+                s.push(r.circle(320, 240, 5).attr({fill: "none", "stroke-width": 10}));
+                s.attr({stroke: Raphael.getColor()});
+                */
+            }
+
             var na = [
                     createNode("s"),
                     createNode("d"),
@@ -166,10 +231,17 @@
                     createNode("c"),
                     createNode("d"),
                     createNode("e"),
+                    createNode("e"),
+                    createNode("e"),
+                    createNode("e"),
+                    createNode("e"),
+                    createNode("e"),
+                    createNode("e"),
                     createNode("f")
                 ];
 
             randomizeGraph(0.3, na);
+            drawGraph(na);
 
             var paths = allPaths(na[0], na[1]);
 
