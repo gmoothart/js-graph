@@ -13,10 +13,14 @@
     <h2>Shortest Path(s)</h2>
     <div id="shortPathsCt"></div>
     <div id="shortPaths"></div>
-    <h1 id="qunit-header">QUnit example</h1>  
+
+
+    <div style="width:500px;">
+    <h1 id="qunit-header">QUnit tests</h1>  
     <h2 id="qunit-banner"></h2>  
     <h2 id="qunit-userAgent"></h2>  
     <ol id="qunit-tests">  
+    </div>
 
     <script type="text/javascript" src="jquery-1.7.1.js"></script>
     <script type="text/javascript" src="qunit-git.js"></script>
@@ -34,6 +38,8 @@
              * Node needs undirected edges!
              * access nodes by both name and index!
              * path API is cumbersome!
+             * fix vim auto-indenting!!
+             * will it still work if I make add() mutable??
 
             */
 
@@ -84,10 +90,21 @@
                         a.push(node);
                         return createPath(a);
                     },
-                    get: function () {
+                    toArr: function () {
                         return _arr.slice(0);
-                    }
+                    },
+                    toString: function() {
+                        var i,
+                            s = '';
+                        if (_arr.length > 0) {
+                            s = _arr[0].name;
+                        }
+                        for(i=1; i < _arr.length; i++) {
+                            s = s + " -> " + _arr[i].name;
+                        }
 
+                        return s;
+                    }
                 };
             }
 
@@ -141,6 +158,27 @@
                 });
             }
 
+            var na = [
+                    createNode("s"),
+                    createNode("d"),
+                    createNode("a"),
+                    createNode("b"),
+                    createNode("c"),
+                    createNode("d"),
+                    createNode("e"),
+                    createNode("f")
+                ];
+
+            randomizeGraph(0.3, na);
+
+            var paths = allPaths(na[0], na[1]);
+
+            $('#allPathsCt').text(paths.length);
+            for(var i=0; i < paths.length; i++) {
+              $('#allPaths').append($("<p>" + paths[i].toString() + "</p>"))
+
+            }
+
 
             /*
             QUnit tests
@@ -171,9 +209,6 @@
                     });
 
             });
-            test("randomizeGraph creates proper distribution for p=0.1", function() {
-
-            });
             test("randomizeGraph creates fully connected graph for p=1", function() {
                 var na = [
                         createNode("s"),
@@ -200,8 +235,22 @@
                 paths = allPaths(n, n);
 
                 equal(paths.length, 1);
-                equal(paths[0].get().length, 1);
-                equal(paths[0].get()[0].name, "s");
+                equal(paths[0].toArr().length, 1);
+                equal(paths[0].toArr()[0].name, "s");
+            });
+            test("allPaths should return empty array if no path from src to dest", function() {
+
+                var d = createNode("d"),
+                    n = createNode("s", [
+                          createNode("1"),
+                          createNode("2"),
+                          createNode("3"),
+                        ]),
+                    paths;
+
+                paths = allPaths(n, d);
+
+                equal(paths.length, 0);
             });
             test("allPaths handles loops correctly", function() {
 
@@ -228,8 +277,8 @@
 
                 // each path starts with 'n' and ends with 'd'?
                 $.each(paths, function(i,p) {
-                    equal('s', p.get()[0].name);
-                    equal('d', p.get()[ p.get().length-1 ].name);
+                    equal('s', p.toArr()[0].name);
+                    equal('d', p.toArr()[ p.toArr().length-1 ].name);
                 });
             });
         })();
