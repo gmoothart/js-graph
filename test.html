@@ -15,13 +15,47 @@
     <script type="text/javascript">
         (function () {
             "use strict";
+            /*
+              to do:
+             * create graph randomizer
+             * find shortest unique paths
+             * report output
+             * graph visualizer (raphael?)
+             * modularize (require.js?)
+             * allPaths a method on Node?
+             * Node needs undirected edges!
+             * access nodes by both name and index!
+             * path API is cumbersome!
+
+            */
 
             function createNode(name, children) {
+                var _name = name || '',
+                    _children = children || [],
+                    that = {
+                        name: _name,
+                        children: _children,
+                        hasChild: function(c) {
+                            return _children.indexOf(c) !== -1;
+                        },
+                        add: function(c) {
+                            // edges need to be bi-directional, so add to
+                            // children too
+                            if (!that.hasChild(c)) {
+                                _children.push(c);
+                            }
+                            if (!c.hasChild(that)) {
+                                c.children.push(that);
+                            }
+                        },
+                        toString: function() { return _name; }
+                    };
 
-                return {
-                    name: name || '',
-                    children: children || []
-                }
+                $.each(_children, function(i,c) {
+                    that.add(c);
+                });
+
+                return that;
             };
 
             /**
@@ -71,18 +105,11 @@
                     }
 
                     for (i = 0; i < node.children.length; i++) {
-                        allPaths(node.children[i], dest, newPath);
+                        _allPaths(node.children[i], dest, newPath);
                     }
                 }
             }
 
-            var n = createNode("s", [
-                createNode("1", []),
-                createNode("2", []),
-            ]);
-            var src = createNode("dest");
-
-            allPaths(n, src);
 
 
             /*
@@ -103,6 +130,28 @@
                 equal(paths.length, 1);
                 equal(paths[0].get().length, 1);
                 equal(paths[0].get()[0].name, "s");
+            });
+            test("handles loops correctly", function() {
+
+                var d = createNode("d"),
+                    n = createNode("s", [
+                          createNode("1", [
+                            createNode("3", [d])
+                          ]),
+                          createNode("2", [
+                            createNode("4", [d])
+                          ]),
+                        ]),
+                    paths;
+
+                // add cycles: 3-2
+                n.children[0].children[0].add(
+                  n.children[1]
+                );
+
+                paths = allPaths(n, d);
+
+                equal(paths.length, 4);
             });
         })();
     </script>
