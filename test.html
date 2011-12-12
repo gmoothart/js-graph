@@ -8,11 +8,13 @@
             margin-bottom: 0px;
         }
 
+        /*
         #allPaths, #shortPaths {
             height: 300px;
             width: 300px;
             overflow: auto;
         }
+        */
 
     </style>
 </head>
@@ -46,18 +48,16 @@
 
 
             /*
-              to do:
-             * create graph randomizer
-             * find shortest unique paths
-             * report output
-             * graph visualizer (raphael?)
-             * modularize (require.js?)
-             * allPaths a method on Node?
-             * Node needs undirected edges!
-             * access nodes by both name and index!
-             * path API is cumbersome!
-             * fix vim auto-indenting!!
-             * will it still work if I make add() mutable??
+               MUST do:
+               2) implement, display shortest-path 
+
+               Nice to do:
+               * allow user to change node list on the fly
+               * allow user to select source, destination nodes
+               * highlight shortest paths
+               * re-arrange, pretify layout
+               * modularize (require.js?)
+               * allPaths a method on Node?
 
             */
 
@@ -111,6 +111,9 @@
                     toArr: function () {
                         return _arr.slice(0);
                     },
+                    getLength: function() {
+                        return _arr.length;
+                    },
                     toString: function() {
                         var i,
                             s = '';
@@ -150,6 +153,60 @@
                     for (i = 0; i < node.children.length; i++) {
                         _allPaths(node.children[i], dest, newPath);
                     }
+                }
+            }
+
+            function shortestPaths(node, dest) {
+                var paths = [],
+                    visitedEdges = {},
+                    min = Infinity,
+                    ap = allPaths(node, dest);
+
+                $.each(ap, function(i,path) {
+
+                    if (path.getLength() < min) {
+                        // we found a new minimum path length,
+                        // so start over
+                        paths = [path];
+                        visitedEdges = {};
+                        markEdges(path);
+                        min = path.getLength();
+                    }
+                    else if (path.getLength() === min) {
+                        // we found a new path with the minimum
+                        // length. Add it if it does not have
+                        // any edges in common with existing
+                        //shortest paths
+                        if (!hasVisitedEdges(path)) {
+                            paths.push(path);
+                            markEdges(path);
+                        }
+                    }
+                });
+
+                return paths;
+
+                /* private helper functions */
+                function markEdges(path) {
+                    var i,
+                        nodes = path.toArr();
+                    for(i=1; i < nodes.length; i++) {
+                        visitedEdges[ nodes[i-1] ] = nodes[i];
+                        visitedEdges[ nodes[i] ] = nodes[i-1];
+                    }
+
+                }
+                function hasVisitedEdges(path) {
+                    var i,
+                        nodes = path.toArr();
+
+                    for(i=1; i < nodes.length; i++) {
+                        if (visitedEdges[ nodes[i] ] === nodes[i-1]) {
+                            return true;
+                        }
+                    }
+
+                    return false;
                 }
             }
 
@@ -200,7 +257,8 @@
                                 circle;
 
                             // draw circle for node
-                            circle = _r.circle(320, 450, 10).attr({stroke: c, fill: c, transform: t, "fill-opacity": .4});
+                            circle = _r.circle(320, 450, 10).attr({transform: t, "fill-opacity": .4});
+                            _r.text(320,450,n.name).attr({stroke: c, fill: c, transform: t, "fill-opacity": .4});
 
                             // save circle reference, and map so that lookups
                             // are easy
@@ -213,6 +271,7 @@
                         });
 
                         // draw edges
+                        // to do: do not draw them twice!
                         $.each(nodes, function(i,n) {
                             $.each(n.children, function(j,c) {
                                 var c1 = _nodeToCircle[n],
@@ -228,77 +287,31 @@
                                         "L" + x2 + "," + y2);
                             });
                         });
-
                     }
 
                 }
 
                 return that;
             };
-            /*
-            function drawGraph(nodes) {
-
-              var width=640,
-                  height=480,
-                  r = Raphael("graphContainer", width, height),
-                  angle = 0,
-                  drawNodes = [],
-                  i;
-
-              $.each(nodes, function(i,n) {
-                  var c = Raphael.getColor(),
-                      t = "r" + angle + " " + width/2 + " " + height/2;
-
-                  drawNodes.push({
-                      circle: r.circle(320, 450, 10).attr({stroke: c, fill: c, transform: t, "fill-opacity": .4}),
-                      node: n
-                  });
-
-                  // increment length the appropriate amount
-                  angle = angle + (360 / nodes.length);
-              });
-
-
-                while (angle < 360) {
-                    var color = Raphael.getColor();
-                    (function (t, c) {
-                        r.circle(320, 450, 20).attr({stroke: c, fill: c, transform: t, "fill-opacity": .4}).click(function () {
-                            s.animate({transform: t, stroke: c}, 2000, "bounce");
-                        }).mouseover(function () {
-                            this.animate({"fill-opacity": .75}, 500);
-                        }).mouseout(function () {
-                            this.animate({"fill-opacity": .4}, 500);
-                        });
-                    })("r" + angle + " 320 240", color);
-                    angle += 30;
-                }
-                Raphael.getColor.reset();
-                var s = r.set();
-                s.push(r.path("M320,240l-0,190").attr({fill: "none", "stroke-width": 2}));
-                s.push(r.circle(320, 450, 20).attr({fill: "none", "stroke-width": 2}));
-                s.push(r.circle(320, 240, 5).attr({fill: "none", "stroke-width": 10}));
-                s.attr({stroke: Raphael.getColor()});
-            }
-                */
 
             var na = [
-                    createNode("s"),
-                    createNode("d"),
+                    createNode("source"),
+                    createNode("destination"),
                     createNode("a"),
                     createNode("b"),
                     createNode("c"),
                     createNode("d"),
                     createNode("e"),
-                    createNode("e"),
-                    createNode("e"),
-                    createNode("e"),
-                    createNode("e"),
-                    createNode("e"),
-                    createNode("e"),
-                    createNode("f")
+                    createNode("f"),
+                    createNode("g"),
+                    createNode("h"),
+                    createNode("i"),
+                    createNode("j"),
+                    createNode("k"),
+                    createNode("l")
                 ];
 
-            randomizeGraph(0.3, na);
+            randomizeGraph(0.15, na);
             var d = createGraphDrawer(na);
             d.draw();
 
@@ -306,8 +319,13 @@
 
             $('#allPathsCt').text(paths.length);
             for(var i=0; i < paths.length; i++) {
-              $('#allPaths').append($("<p>" + paths[i].toString() + "</p>"))
+                $('#allPaths').append($("<p>" + paths[i].toString() + "</p>"))
+            }
 
+            var shortPaths = shortestPaths(na[0], na[1]);
+            $('#shortPathsCt').text(shortPaths.length);
+            for(var i=0; i < shortPaths.length; i++) {
+                $('#shortPaths').append($("<p>" + shortPaths[i].toString() + "</p>"))
             }
 
 
@@ -411,6 +429,28 @@
                     equal('s', p.toArr()[0].name);
                     equal('d', p.toArr()[ p.toArr().length-1 ].name);
                 });
+            });
+            test("allPaths is symmetric", function() {
+                var d = createNode("d"),
+                    n = createNode("s", [
+                          createNode("1", [
+                            createNode("3", [d])
+                          ]),
+                          createNode("2", [
+                            createNode("4", [d])
+                          ]),
+                        ]);
+
+                // add cycles: 3-2
+                n.children[0].children[0].add(
+                  n.children[1]
+                );
+
+                var paths1 = allPaths(n, d);
+                var paths2 = allPaths(d, n);
+
+                equal(paths1.length, paths2.length);
+
             });
         })();
     </script>
