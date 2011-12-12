@@ -19,12 +19,39 @@
     </style>
 </head>
 <body>
-    <h2>All Paths</h2>
-    <div id="allPathsCt"></div>
-    <div id="allPaths"></div>
-    <h2>Shortest Path(s)</h2>
-    <div id="shortPathsCt"></div>
-    <div id="shortPaths"></div>
+  <div id="inputContainer">
+    <div style="float:left;">
+      <label for="nodesTextarea">Nodes:</label>
+        <br>
+        <textarea id="nodesTextarea">
+source
+destination
+a
+b
+c
+d
+e
+f</textarea>
+    </div>
+    <div style="float:left;">
+        <label for="srcInput">Source</label>
+        <br>
+        <input id="srcInput" type="text" value="source" />
+    </div>
+    <div style="float:left;">
+        <label for="destInput">Destination</label>
+        <br>
+        <input id="destInput" type="text" value="destination" />
+    </div>
+    <div style="float:left;">
+        <label for="randParam">Graph density (0=no edges, 1=fully connected)</label>
+        <br>
+        <input id="randParam" type="text" value="0.15" />
+    </div>
+    <div style="clear:both;">
+        <button id="updateBtn" type="button">update</button>
+    </div>
+  </div>
 
     <div id="graphContainer">
 
@@ -32,6 +59,19 @@
     </div>
 
 
+    <div>
+      <div style="float:left; margin-right: 20px;">
+        <h2>Shortest Path(s)</h2>
+        <div id="shortPathsCt"></div>
+        <div id="shortPaths"></div>
+      </div>
+      <div style="float:left;">
+        <h2>All Paths</h2>
+        <div id="allPathsCt"></div>
+        <div id="allPaths"></div>
+      </div>
+      <br style="clear:both;">
+    </div>
     <div style="width:500px;">
     <h1 id="qunit-header">QUnit tests</h1>  
     <h2 id="qunit-banner"></h2>  
@@ -48,17 +88,23 @@
 
 
             /*
-               MUST do:
-               2) implement, display shortest-path 
-
                Nice to do:
-               * allow user to change node list on the fly
-               * allow user to select source, destination nodes
+               * Bug!! I see a "source -> node" edge repeated more than once in the
+                 shortest paths list!!
+               * Make src/dest configurable without re-generating the graph
+               * 'update' button can create a new graph somehow!! Creating persistent
+                 state somewhere.
+               * clean up code, find better way to keep track of visited edges
                * highlight shortest paths
                * re-arrange, pretify layout
                * modularize (require.js?)
                * allPaths a method on Node?
-
+               * true hash tables, not relying on the .toString() for objects?
+               * optimize!!
+               * raphael: move edges in so they don't obscure labels
+               * raphael: don't draw edges twice!
+               * put src at top and dest at bottom of graph
+               * re-draw using a better layout?
             */
 
             function createNode(name, children) {
@@ -294,39 +340,53 @@
                 return that;
             };
 
-            var na = [
-                    createNode("source"),
-                    createNode("destination"),
-                    createNode("a"),
-                    createNode("b"),
-                    createNode("c"),
-                    createNode("d"),
-                    createNode("e"),
-                    createNode("f"),
-                    createNode("g"),
-                    createNode("h"),
-                    createNode("i"),
-                    createNode("j"),
-                    createNode("k"),
-                    createNode("l")
-                ];
+            $('#updateBtn').on('click', function() {
+                var nodeStrings, nodes, pVal, d, paths,
+                    srcIndex = -1,
+                    destIndex = -1,
+                    nodeText = $('#nodesTextarea').val(),
+                    src = $('#srcInput').val(),
+                    dest = $('#destInput').val(),
+                    p = $('#randParam').val();
+                try {
+                    nodeStrings = nodeText.split(/\n/g);
 
-            randomizeGraph(0.15, na);
-            var d = createGraphDrawer(na);
-            d.draw();
+                    srcIndex = nodeStrings.indexOf(src);
+                    if (srcIndex === -1) throw "'Source' must be in Nodes list!";
 
-            var paths = allPaths(na[0], na[1]);
+                    destIndex = nodeStrings.indexOf(dest); 
+                    if (destIndex === -1) throw "'Destination' must be in Nodes list!";
 
-            $('#allPathsCt').text(paths.length);
-            for(var i=0; i < paths.length; i++) {
-                $('#allPaths').append($("<p>" + paths[i].toString() + "</p>"))
-            }
+                    nodes = $.map(nodeStrings, function(s,i) {
+                        return createNode(s);
+                    });
 
-            var shortPaths = shortestPaths(na[0], na[1]);
-            $('#shortPathsCt').text(shortPaths.length);
-            for(var i=0; i < shortPaths.length; i++) {
-                $('#shortPaths').append($("<p>" + shortPaths[i].toString() + "</p>"))
-            }
+                    pVal = parseFloat(p, 10);
+                    randomizeGraph(pVal, nodes);
+
+                    d = createGraphDrawer(nodes);
+                    d.draw();
+
+                    paths = allPaths(nodes[srcIndex], nodes[destIndex]);
+
+                    $('#allPathsCt').text(paths.length);
+                    for(var i=0; i < paths.length; i++) {
+                        $('#allPaths').append($("<p>" + paths[i].toString() + "</p>"))
+                    }
+
+                    var shortPaths = shortestPaths(nodes[srcIndex], nodes[destIndex]);
+                    $('#shortPathsCt').text(shortPaths.length);
+                    for(var i=0; i < shortPaths.length; i++) {
+                        $('#shortPaths').append($("<p>" + shortPaths[i].toString() + "</p>"))
+                    }
+                }
+                catch(e) {
+                    alert(e);
+                    console.log(e);
+                }
+            });
+
+            $('#updateBtn').click();
 
 
             /*
