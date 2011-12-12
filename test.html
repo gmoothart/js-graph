@@ -176,31 +176,89 @@
                 });
             }
 
+            function createGraphDrawer(nodes) {
+
+                // need to be able to map easily between nodes and circles
+                // also between edges and lines
+                var _width=640,
+                    _height=480,
+                    _r = Raphael("graphContainer", _width, _height),
+                    _circles = [],
+                    _nodeToCircle = {},
+                    _circleToNode = {},
+                    that;
+
+                that = {
+                    nodes: nodes || [],
+                    draw: function() {
+                        var angle = 0;
+
+                        // draw nodes
+                        $.each(that.nodes, function(i,n) {
+                            var c = Raphael.getColor(),
+                                t = "r" + angle + " " + _width/2 + " " + _height/2,
+                                circle;
+
+                            // draw circle for node
+                            circle = _r.circle(320, 450, 10).attr({stroke: c, fill: c, transform: t, "fill-opacity": .4});
+
+                            // save circle reference, and map so that lookups
+                            // are easy
+                            _circles.push(circle);
+                            _nodeToCircle[n] = circle;
+                            _circleToNode[circle] = n;
+
+                            // increment length the appropriate amount
+                            angle = angle + (360 / nodes.length);
+                        });
+
+                        // draw edges
+                        $.each(nodes, function(i,n) {
+                            $.each(n.children, function(j,c) {
+                                var c1 = _nodeToCircle[n],
+                                    bb1 = c1.getBBox(),
+                                    x1 = bb1.x + bb1.width/2,
+                                    y1 = bb1.y + bb1.height/2,
+                                    c2 = _nodeToCircle[c],
+                                    bb2 = c2.getBBox(),
+                                    x2 = bb2.x + bb2.width/2,
+                                    y2 = bb2.y + bb2.height/2;
+
+                                _r.path("M" + x1 + "," + y1 + 
+                                        "L" + x2 + "," + y2);
+                            });
+                        });
+
+                    }
+
+                }
+
+                return that;
+            };
+            /*
             function drawGraph(nodes) {
 
               var width=640,
                   height=480,
                   r = Raphael("graphContainer", width, height),
-                  angle = 0
+                  angle = 0,
+                  drawNodes = [],
                   i;
 
               $.each(nodes, function(i,n) {
                   var c = Raphael.getColor(),
-                      t = "r" + angle + " 320 240";
+                      t = "r" + angle + " " + width/2 + " " + height/2;
 
-                  r.circle(320, 450, 20).attr({stroke: c, fill: c, transform: t, "fill-opacity": .4}).click(function () {
-                      s.animate({transform: t, stroke: c}, 2000, "bounce");
-                  }).mouseover(function () {
-                      this.animate({"fill-opacity": .75}, 500);
-                  }).mouseout(function () {
-                      this.animate({"fill-opacity": .4}, 500);
+                  drawNodes.push({
+                      circle: r.circle(320, 450, 10).attr({stroke: c, fill: c, transform: t, "fill-opacity": .4}),
+                      node: n
                   });
 
                   // increment length the appropriate amount
                   angle = angle + (360 / nodes.length);
               });
 
-              /*
+
                 while (angle < 360) {
                     var color = Raphael.getColor();
                     (function (t, c) {
@@ -216,12 +274,12 @@
                 }
                 Raphael.getColor.reset();
                 var s = r.set();
-                s.push(r.path("M320,240c-50,100,50,110,0,190").attr({fill: "none", "stroke-width": 2}));
+                s.push(r.path("M320,240l-0,190").attr({fill: "none", "stroke-width": 2}));
                 s.push(r.circle(320, 450, 20).attr({fill: "none", "stroke-width": 2}));
                 s.push(r.circle(320, 240, 5).attr({fill: "none", "stroke-width": 10}));
                 s.attr({stroke: Raphael.getColor()});
-                */
             }
+                */
 
             var na = [
                     createNode("s"),
@@ -241,7 +299,8 @@
                 ];
 
             randomizeGraph(0.3, na);
-            drawGraph(na);
+            var d = createGraphDrawer(na);
+            d.draw();
 
             var paths = allPaths(na[0], na[1]);
 
