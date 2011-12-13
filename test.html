@@ -89,22 +89,12 @@ f</textarea>
 
             /*
                Nice to do:
-               * Bug!! I see a "source -> node" edge repeated more than once in the
-                 shortest paths list!!
                * Make src/dest configurable without re-generating the graph
-               * 'update' button can create a new graph somehow!! Creating persistent
-                 state somewhere.
                * clean up code, find better way to keep track of visited edges
                * highlight shortest paths
-               * re-arrange, pretify layout
                * modularize (require.js?)
-               * allPaths a method on Node?
-               * true hash tables, not relying on the .toString() for objects?
-               * optimize!!
                * raphael: move edges in so they don't obscure labels
                * raphael: don't draw edges twice!
-               * put src at top and dest at bottom of graph
-               * re-draw using a better layout?
             */
 
             function createNode(name, children) {
@@ -157,6 +147,17 @@ f</textarea>
                     toArr: function () {
                         return _arr.slice(0);
                     },
+                    getEdges: function() {
+                        /*
+                         * return an explicit representation of the edges in the path
+                         */
+                        var i, edges = [];
+                        for (i=1; i < _arr.length; i++) {
+                            edges.push( createEdge(_arr[i-1], _arr[i]) );
+                        }
+
+                        return edges;
+                    },
                     getLength: function() {
                         return _arr.length;
                     },
@@ -173,6 +174,26 @@ f</textarea>
                         return s;
                     }
                 };
+            }
+
+            function createEdge(n1, n2) {
+                var that = {
+                    node1: n1,
+                    node2: n2,
+                    toString: function() {
+                        // need to order the edges for reliable
+                        // comparison
+                        if (n1 < n2) {
+                            return "(" + n1.toString() + "," + n2.toString() + ")";
+                        }
+                        else {
+                            return "(" + n2.toString() + "," + n1.toString() + ")";
+                        }
+                    }
+                };
+
+
+                return that;
             }
 
             function allPaths(node, dest) {
@@ -235,24 +256,18 @@ f</textarea>
                 /* private helper functions */
                 function markEdges(path) {
                     var i,
-                        nodes = path.toArr();
-                    for(i=1; i < nodes.length; i++) {
-                        visitedEdges[ nodes[i-1] ] = nodes[i];
-                        visitedEdges[ nodes[i] ] = nodes[i-1];
-                    }
+                        edges = path.getEdges();
 
+                    $.each(edges, function(i, edge) {
+                        visitedEdges[edge] = true;
+                    });
                 }
                 function hasVisitedEdges(path) {
-                    var i,
-                        nodes = path.toArr();
+                    var edges = path.getEdges();
 
-                    for(i=1; i < nodes.length; i++) {
-                        if (visitedEdges[ nodes[i] ] === nodes[i-1]) {
-                            return true;
-                        }
-                    }
-
-                    return false;
+                    return edges.some(function(edge) {
+                        return visitedEdges[edge];
+                    });
                 }
             }
 
@@ -279,13 +294,13 @@ f</textarea>
                 });
             }
 
-            function createGraphDrawer(nodes) {
+            function createGraphDrawer(nodes, canvas) {
 
                 // need to be able to map easily between nodes and circles
                 // also between edges and lines
                 var _width=640,
                     _height=480,
-                    _r = Raphael("graphContainer", _width, _height),
+                    _r = canvas,
                     _circles = [],
                     _nodeToCircle = {},
                     _circleToNode = {},
@@ -295,6 +310,8 @@ f</textarea>
                     nodes: nodes || [],
                     draw: function() {
                         var angle = 0;
+
+                        _r.clear();
 
                         // draw nodes
                         $.each(that.nodes, function(i,n) {
@@ -340,6 +357,11 @@ f</textarea>
                 return that;
             };
 
+
+
+
+            var canvas = Raphael("graphContainer", 640, 480);
+
             $('#updateBtn').on('click', function() {
                 var nodeStrings, nodes, pVal, d, paths,
                     srcIndex = -1,
@@ -364,18 +386,20 @@ f</textarea>
                     pVal = parseFloat(p, 10);
                     randomizeGraph(pVal, nodes);
 
-                    d = createGraphDrawer(nodes);
+                    d = createGraphDrawer(nodes, canvas);
                     d.draw();
 
                     paths = allPaths(nodes[srcIndex], nodes[destIndex]);
 
                     $('#allPathsCt').text(paths.length);
+                    $('#allPaths').text(""); // clear
                     for(var i=0; i < paths.length; i++) {
                         $('#allPaths').append($("<p>" + paths[i].toString() + "</p>"))
                     }
 
                     var shortPaths = shortestPaths(nodes[srcIndex], nodes[destIndex]);
                     $('#shortPathsCt').text(shortPaths.length);
+                    $('#shortPaths').text("");
                     for(var i=0; i < shortPaths.length; i++) {
                         $('#shortPaths').append($("<p>" + shortPaths[i].toString() + "</p>"))
                     }
@@ -510,6 +534,20 @@ f</textarea>
                 var paths2 = allPaths(d, n);
 
                 equal(paths1.length, paths2.length);
+
+            });
+            test("shortPaths does not include duplicate edges", function() {
+                var d = createNode("d"),
+                    n = createNode("s", [
+                          createNode("1", [
+                            createNode("2", [d]),
+                            createNode("3", [d])
+                          ])
+                        ]);
+
+                var sp = shortestPaths(n,d);
+
+                equal(1, sp.length);
 
             });
         })();
