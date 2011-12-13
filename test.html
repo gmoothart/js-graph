@@ -33,8 +33,7 @@ Queen
 The Eagles
 Metallica
 U2
-Bob Marley
-</textarea>
+Bob Marley</textarea>
     </div>
     <div style="float:left;">
         <label for="srcInput">Source</label>
@@ -102,7 +101,7 @@ Bob Marley
 
             function run(regenGraph) {
 
-                var nodeStrings, pVal, paths,
+                var nodeStrings, pVal, paths, pathText,
                     srcIndex = -1,
                     destIndex = -1,
                     nodeText = $('#nodesTextarea').val(),
@@ -136,25 +135,47 @@ Bob Marley
                         graphDrawer.unhighlightPaths();
                     }
 
-                    // find all paths
-                    paths = g.allPaths(nodes[srcIndex], nodes[destIndex]);
-
-                    $('#allPathsCt').text(paths.length);
+                    // clear from last time
+                    $('#allPathsCt').text("");
                     $('#allPaths').text(""); // clear
-                    for(var i=0; i < paths.length; i++) {
-                        $('#allPaths').append($("<p>" + paths[i].toString() + "</p>"))
-                    }
-
-                    // find shortest paths
-                    var shortPaths = g.shortestPaths(nodes[srcIndex], nodes[destIndex]);
-                    $.each(shortPaths, function(i,path) {
-                        graphDrawer.highlightPath(path);
-                    });
-                    $('#shortPathsCt').text(shortPaths.length);
                     $('#shortPaths').text("");
-                    for(var i=0; i < shortPaths.length; i++) {
-                        $('#shortPaths').append($("<p>" + shortPaths[i].toString() + "</p>"))
-                    }
+                    $('#shortPathsCt').text("working...");
+
+
+                    // yield so the UI thread can draw the graph, then 
+                    // calculate the paths
+                    setTimeout(function() {
+                        try {
+                            // find all paths
+                            // only showing first 1,000 paths, for performance
+                            paths = g.allPaths(nodes[srcIndex], nodes[destIndex]);
+
+                            $('#allPathsCt').text(paths.length);
+                            pathText = "";
+                            for(var i=0; i < paths.length && i < 1001; i++) {
+                                pathText = pathText + "<p>" + paths[i].toString() + "</p>";
+                            }
+                            $('#allPaths').html(pathText);
+
+                            // find shortest paths
+                            var shortPaths = g.shortestPaths(nodes[srcIndex], nodes[destIndex]);
+                            $.each(shortPaths, function(i,path) {
+                                graphDrawer.highlightPath(path);
+                            });
+
+                            $('#shortPathsCt').text(shortPaths.length);
+                            pathText = "";
+                            for(var i=0; i < shortPaths.length; i++) {
+                                pathText = pathText + "<p>" + shortPaths[i].toString() + "</p>";
+                            }
+                            $('#shortPaths').html(pathText);
+                        }
+                        catch(e) {
+                            alert(e);
+                            console.log(e);
+                        }
+
+                    }, 0); // setTimeout()
                 }
                 catch(e) {
                     alert(e);
