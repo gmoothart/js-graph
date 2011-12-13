@@ -24,29 +24,32 @@
       <label for="nodesTextarea">Nodes:</label>
         <br>
         <textarea id="nodesTextarea">
-source
-destination
-a
-b
-c
-d
-e
-f</textarea>
+Led Zeppelin
+The Beatles
+Pink Floyd
+Jimi Hendrix
+Van Halen
+Queen
+The Eagles
+Metallica
+U2
+Bob Marley
+</textarea>
     </div>
     <div style="float:left;">
         <label for="srcInput">Source</label>
         <br>
-        <input id="srcInput" type="text" value="source" />
+        <input id="srcInput" type="text" value="Queen" />
     </div>
     <div style="float:left;">
         <label for="destInput">Destination</label>
         <br>
-        <input id="destInput" type="text" value="destination" />
+        <input id="destInput" type="text" value="Led Zeppelin" />
     </div>
     <div style="float:left;">
         <label for="randParam">Graph density (0=no edges, 1=fully connected)</label>
         <br>
-        <input id="randParam" type="text" value="0.15" />
+        <input id="randParam" type="text" value="0.4" />
     </div>
     <div style="clear:both;">
         <button id="updateBtn" type="button">update</button>
@@ -86,12 +89,6 @@ f</textarea>
     <script type="text/javascript" src="raphael.js"></script>
     <script type="text/javascript">
 
-        /*
-            to do:
-            * need to re-draw bold edges if only source/dest are changed!
-              could we just re-draw entire graph?
-            * on github!
-        */
         require(['graph', 'draw', 'test'], function(g, draw) {
             "use strict";
 
@@ -133,6 +130,10 @@ f</textarea>
                         g.randomizeGraph(pVal, nodes);
 
                         graphDrawer.draw();
+                    }
+                    else {
+                        // unhighlight previous shortest paths
+                        graphDrawer.unhighlightPaths();
                     }
 
                     // find all paths

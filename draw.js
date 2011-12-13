@@ -73,15 +73,28 @@ define(['graph'], function(g) {
                 });
             },
             highlightPath: function(path) {
-                var edges = path.getEdges();
+                var edges = path.getEdges(),
+                    c = Raphael.getColor();
 
                 $.each(edges, function(i,edge) {
                     var line = _edgesToLines[edge];
                     if (line) {
-                        line.attr({ stroke: Raphael.color("red"), "stroke-width": 3 });
+                        line.attr({ stroke: c, "stroke-width": 3 });
                     }
 
                 });
+            },
+            unhighlightPaths: function() {
+                var name, line;
+
+                for (name in _edgesToLines) {
+                    if (_edgesToLines.hasOwnProperty(name))  {
+                        line = _edgesToLines[name];
+                        if (line.attr("stroke-width") > 1) {
+                            line.attr({ stroke: Raphael.color("black"), "stroke-width":1 });
+                        }
+                    }
+                }
 
             }
         }
