@@ -89,10 +89,7 @@ f</textarea>
 
             /*
                to do:
-               * Make src/dest configurable without re-generating the graph
-               * highlight shortest paths
                * modularize (require.js?)
-               * raphael: don't draw edges twice!
                * on github!
             */
 
@@ -303,12 +300,14 @@ f</textarea>
                     _circles = [],
                     _nodeToCircle = {},
                     _circleToNode = {},
+                    _edgesToLines = {},
                     that;
 
                 that = {
                     nodes: nodes || [],
                     draw: function() {
-                        var angle = 0;
+                        var angle = 0,
+                            edgesDrawn = {};
 
                         _r.clear();
 
@@ -333,24 +332,44 @@ f</textarea>
                         });
 
                         // draw edges
-                        // to do: do not draw them twice!
                         $.each(nodes, function(i,n) {
                             $.each(n.children, function(j,c) {
-                                var c1 = _nodeToCircle[n],
+                                var edge = createEdge(n,c),
+                                    c1 = _nodeToCircle[n],
                                     bb1 = c1.getBBox(),
                                     x1 = bb1.x + bb1.width/2,
                                     y1 = bb1.y + bb1.height/2,
                                     c2 = _nodeToCircle[c],
                                     bb2 = c2.getBBox(),
                                     x2 = bb2.x + bb2.width/2,
-                                    y2 = bb2.y + bb2.height/2;
+                                    y2 = bb2.y + bb2.height/2,
+                                    line;
 
-                                _r.path("M" + x1 + "," + y1 + 
-                                        "L" + x2 + "," + y2);
+                                // do not draw an edge twice!
+                                if (!edgesDrawn[edge]) {
+                                    line = _r.path("M" + x1 + "," + y1 + 
+                                            "L" + x2 + "," + y2);
+
+                                    edgesDrawn[edge] = true;
+
+                                    // remember lines for future reference
+                                    _edgesToLines[edge] = line;
+                                }
                             });
                         });
-                    }
+                    },
+                    highlightPath: function(path) {
+                        var edges = path.getEdges();
 
+                        $.each(edges, function(i,edge) {
+                            var line = _edgesToLines[edge];
+                            if (line) {
+                                line.attr({ stroke: Raphael.color("red"), "stroke-width": 3 });
+                            }
+
+                        });
+
+                    }
                 }
 
                 return that;
@@ -398,6 +417,9 @@ f</textarea>
                     }
 
                     var shortPaths = shortestPaths(nodes[srcIndex], nodes[destIndex]);
+                    $.each(shortPaths, function(i,path) {
+                        d.highlightPath(path);
+                    });
                     $('#shortPathsCt').text(shortPaths.length);
                     $('#shortPaths').text("");
                     for(var i=0; i < shortPaths.length; i++) {
