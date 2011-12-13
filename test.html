@@ -74,315 +74,38 @@ f</textarea>
       <br style="clear:both;">
     </div>
     <div style="width:500px;">
-    <h1 id="qunit-header">QUnit tests</h1>  
-    <h2 id="qunit-banner"></h2>  
-    <h2 id="qunit-userAgent"></h2>  
-    <ol id="qunit-tests">  
+      <h1 id="qunit-header">QUnit tests</h1>  
+      <h2 id="qunit-banner"></h2>  
+      <h2 id="qunit-userAgent"></h2>  
+      <ol id="qunit-tests">  
     </div>
 
+    <script data-main="./" src="require.js"></script>
     <script type="text/javascript" src="jquery-1.7.1.js"></script>
     <script type="text/javascript" src="qunit-git.js"></script>
     <script type="text/javascript" src="raphael.js"></script>
     <script type="text/javascript">
-        (function () {
+
+        /*
+            to do:
+            * need to re-draw bold edges if only source/dest are changed!
+              could we just re-draw entire graph?
+            * on github!
+        */
+        require(['graph', 'draw', 'test'], function(g, draw) {
             "use strict";
 
-            /*
-               to do:
-               * modularize (require.js?)
-               * on github!
-            */
+            var nodes, graphDrawer,
+                canvas = Raphael("graphContainer", 640, 480);
 
-            function createNode(name, children) {
-                var _name = name || '',
-                    _children = children || [],
-                    that = {
-                        name: _name,
-                        children: _children,
-                        hasChild: function(c) {
-                            return that.children.indexOf(c) !== -1;
-                        },
-                        add: function(c) {
-                            // edges need to be bi-directional, so add to
-                            // children too
-                            if (!that.hasChild(c)) {
-                                that.children.push(c);
-                            }
-                            if (!c.hasChild(that)) {
-                                c.children.push(that);
-                            }
-                        },
-                        toString: function() { return _name; }
-                    };
+            $('#updateBtn').on('click', function() { run(true); });
+            $('#updateSrcDestBtn').on('click', function() { run(false); });
 
-                $.each(that.children, function(i,c) {
-                    that.add(c);
-                });
+            $('#updateBtn').click();
 
-                return that;
-            };
+            function run(regenGraph) {
 
-            /**
-            createPath - immutable path data structure.
-            `add` does not modify the current instance, it 
-            returns a new instance with the new node added
-            */
-            function createPath(arr) {
-                var _arr = arr || [];
-
-                return {
-                    contains: function (node) {
-                        return _arr.indexOf(node) !== -1;
-                    },
-                    add: function (node) {
-                        // copy path array, add new node, return new path
-                        var a = _arr.slice(0);
-                        a.push(node);
-                        return createPath(a);
-                    },
-                    toArr: function () {
-                        return _arr.slice(0);
-                    },
-                    getEdges: function() {
-                        /*
-                         * return an explicit representation of the edges in the path
-                         */
-                        var i, edges = [];
-                        for (i=1; i < _arr.length; i++) {
-                            edges.push( createEdge(_arr[i-1], _arr[i]) );
-                        }
-
-                        return edges;
-                    },
-                    getLength: function() {
-                        return _arr.length;
-                    },
-                    toString: function() {
-                        var i,
-                            s = '';
-                        if (_arr.length > 0) {
-                            s = _arr[0].name;
-                        }
-                        for(i=1; i < _arr.length; i++) {
-                            s = s + "&rarr;" + _arr[i].name;
-                        }
-
-                        return s;
-                    }
-                };
-            }
-
-            function createEdge(n1, n2) {
-                var that = {
-                    node1: n1,
-                    node2: n2,
-                    toString: function() {
-                        // need to order the edges for reliable
-                        // comparison
-                        if (n1 < n2) {
-                            return "(" + n1.toString() + "," + n2.toString() + ")";
-                        }
-                        else {
-                            return "(" + n2.toString() + "," + n1.toString() + ")";
-                        }
-                    }
-                };
-
-
-                return that;
-            }
-
-            function allPaths(node, dest) {
-
-                var paths = [];
-                _allPaths(node, dest, createPath());
-                return paths;
-
-                function _allPaths(node, dest, path) {
-                    var i, newPath;
-
-                    // abort traversal if we're in a loop
-                    if (path.contains(node)) {
-                        return;
-                    }
-
-                    newPath = path.add(node);
-                    if (node === dest) {
-                        // abort traversal and return the 
-                        paths.push(newPath);
-                        return;
-                    }
-
-                    for (i = 0; i < node.children.length; i++) {
-                        _allPaths(node.children[i], dest, newPath);
-                    }
-                }
-            }
-
-            function shortestPaths(node, dest) {
-                var paths = [],
-                    visitedEdges = {},
-                    min = Infinity,
-                    ap = allPaths(node, dest);
-
-                $.each(ap, function(i,path) {
-
-                    if (path.getLength() < min) {
-                        // we found a new minimum path length,
-                        // so start over
-                        paths = [path];
-                        visitedEdges = {};
-                        markEdges(path);
-                        min = path.getLength();
-                    }
-                    else if (path.getLength() === min) {
-                        // we found a new path with the minimum
-                        // length. Add it if it does not have
-                        // any edges in common with existing
-                        //shortest paths
-                        if (!hasVisitedEdges(path)) {
-                            paths.push(path);
-                            markEdges(path);
-                        }
-                    }
-                });
-
-                return paths;
-
-                /* private helper functions */
-                function markEdges(path) {
-                    var i,
-                        edges = path.getEdges();
-
-                    $.each(edges, function(i, edge) {
-                        visitedEdges[edge] = true;
-                    });
-                }
-                function hasVisitedEdges(path) {
-                    var edges = path.getEdges();
-
-                    return edges.some(function(edge) {
-                        return visitedEdges[edge];
-                    });
-                }
-            }
-
-            /**
-              create random edges among a list of edges,
-              creating an edge between any two nodes 
-              with probability p
-            */
-            function randomizeGraph(p, nodeArr) {
-
-                // start fresh
-                $.each(nodeArr, function(i,n) {
-                    n.children = [];
-                });
-
-                // add edges randomly
-                $.each(nodeArr, function(i,n) {
-                    var j;
-                    for(j=i+1; j < nodeArr.length; j++) {
-                        if (Math.random() < p) {
-                            n.add(nodeArr[j]);
-                        }
-                    }
-                });
-            }
-
-            function createGraphDrawer(nodes, canvas) {
-
-                // need to be able to map easily between nodes and circles
-                // also between edges and lines
-                var _width=640,
-                    _height=480,
-                    _r = canvas,
-                    _circles = [],
-                    _nodeToCircle = {},
-                    _circleToNode = {},
-                    _edgesToLines = {},
-                    that;
-
-                that = {
-                    nodes: nodes || [],
-                    draw: function() {
-                        var angle = 0,
-                            edgesDrawn = {};
-
-                        _r.clear();
-
-                        // draw nodes
-                        $.each(that.nodes, function(i,n) {
-                            var c = Raphael.getColor(),
-                                t = "r" + angle + " " + _width/2 + " " + _height/2,
-                                circle;
-
-                            // draw circle for node
-                            circle = _r.circle(320, 450, 10).attr({transform: t, "fill-opacity": .4});
-                            _r.text(320,450,n.name).attr({stroke: c, fill: c, transform: t, "fill-opacity": .4});
-
-                            // save circle reference, and map so that lookups
-                            // are easy
-                            _circles.push(circle);
-                            _nodeToCircle[n] = circle;
-                            _circleToNode[circle] = n;
-
-                            // increment length the appropriate amount
-                            angle = angle + (360 / nodes.length);
-                        });
-
-                        // draw edges
-                        $.each(nodes, function(i,n) {
-                            $.each(n.children, function(j,c) {
-                                var edge = createEdge(n,c),
-                                    c1 = _nodeToCircle[n],
-                                    bb1 = c1.getBBox(),
-                                    x1 = bb1.x + bb1.width/2,
-                                    y1 = bb1.y + bb1.height/2,
-                                    c2 = _nodeToCircle[c],
-                                    bb2 = c2.getBBox(),
-                                    x2 = bb2.x + bb2.width/2,
-                                    y2 = bb2.y + bb2.height/2,
-                                    line;
-
-                                // do not draw an edge twice!
-                                if (!edgesDrawn[edge]) {
-                                    line = _r.path("M" + x1 + "," + y1 + 
-                                            "L" + x2 + "," + y2);
-
-                                    edgesDrawn[edge] = true;
-
-                                    // remember lines for future reference
-                                    _edgesToLines[edge] = line;
-                                }
-                            });
-                        });
-                    },
-                    highlightPath: function(path) {
-                        var edges = path.getEdges();
-
-                        $.each(edges, function(i,edge) {
-                            var line = _edgesToLines[edge];
-                            if (line) {
-                                line.attr({ stroke: Raphael.color("red"), "stroke-width": 3 });
-                            }
-
-                        });
-
-                    }
-                }
-
-                return that;
-            };
-
-
-
-
-            var canvas = Raphael("graphContainer", 640, 480);
-
-            var nodeStrings, nodes;
-            $('#updateBtn').on('click', function() {
-                var pVal, d, paths,
+                var nodeStrings, pVal, paths,
                     srcIndex = -1,
                     destIndex = -1,
                     nodeText = $('#nodesTextarea').val(),
@@ -392,23 +115,28 @@ f</textarea>
                 try {
                     nodeStrings = nodeText.split(/\n/g);
 
+                    // validate that src and dest are actually nodes
                     srcIndex = nodeStrings.indexOf(src);
                     if (srcIndex === -1) throw "'Source' must be in Nodes list!";
 
                     destIndex = nodeStrings.indexOf(dest); 
                     if (destIndex === -1) throw "'Destination' must be in Nodes list!";
 
-                    nodes = $.map(nodeStrings, function(s,i) {
-                        return createNode(s);
-                    });
+                    // create graph
+                    if (regenGraph) {
+                        nodes = $.map(nodeStrings, function(s,i) {
+                            return g.createNode(s);
+                        });
+                        graphDrawer = draw.createGraphDrawer(nodes, canvas, 640, 480);
 
-                    pVal = parseFloat(p, 10);
-                    randomizeGraph(pVal, nodes);
+                        pVal = parseFloat(p, 10);
+                        g.randomizeGraph(pVal, nodes);
 
-                    d = createGraphDrawer(nodes, canvas);
-                    d.draw();
+                        graphDrawer.draw();
+                    }
 
-                    paths = allPaths(nodes[srcIndex], nodes[destIndex]);
+                    // find all paths
+                    paths = g.allPaths(nodes[srcIndex], nodes[destIndex]);
 
                     $('#allPathsCt').text(paths.length);
                     $('#allPaths').text(""); // clear
@@ -416,9 +144,10 @@ f</textarea>
                         $('#allPaths').append($("<p>" + paths[i].toString() + "</p>"))
                     }
 
-                    var shortPaths = shortestPaths(nodes[srcIndex], nodes[destIndex]);
+                    // find shortest paths
+                    var shortPaths = g.shortestPaths(nodes[srcIndex], nodes[destIndex]);
                     $.each(shortPaths, function(i,path) {
-                        d.highlightPath(path);
+                        graphDrawer.highlightPath(path);
                     });
                     $('#shortPathsCt').text(shortPaths.length);
                     $('#shortPaths').text("");
@@ -430,177 +159,8 @@ f</textarea>
                     alert(e);
                     console.log(e);
                 }
-            });
-
-            $('#updateSrcDestBtn').on('click', function() {
-                var src = $('#srcInput').val(),
-                    dest = $('#destInput').val(),
-                    paths;
-
-                var srcIndex = nodeStrings.indexOf(src);
-                if (srcIndex === -1) throw "'Source' must be in Nodes list!";
-
-                var destIndex = nodeStrings.indexOf(dest); 
-                if (destIndex === -1) throw "'Destination' must be in Nodes list!";
-
-                paths = allPaths(nodes[srcIndex], nodes[destIndex]);
-
-                $('#allPathsCt').text(paths.length);
-                $('#allPaths').text(""); // clear
-                for(var i=0; i < paths.length; i++) {
-                    $('#allPaths').append($("<p>" + paths[i].toString() + "</p>"))
-                }
-
-                var shortPaths = shortestPaths(nodes[srcIndex], nodes[destIndex]);
-                $('#shortPathsCt').text(shortPaths.length);
-                $('#shortPaths').text("");
-                for(var i=0; i < shortPaths.length; i++) {
-                    $('#shortPaths').append($("<p>" + shortPaths[i].toString() + "</p>"))
-                }
-
-            });
-
-            $('#updateBtn').click();
-
-
-            /*
-            QUnit tests
-            http://docs.jquery.com/QUnit
-            */
-            test("createNode should assign node name", function() {
-                var n = createNode("foo");
-
-                equal(n.name, "foo");
-            });
-            test("randomizeGraph creates no edges for p=0", function() {
-
-                var na = [
-                        createNode("s"),
-                        createNode("d"),
-                        createNode("1"),
-                        createNode("2"),
-                        createNode("3"),
-                        createNode("4"),
-                        createNode("5"),
-                        createNode("6"),
-                    ];
-                    
-                    randomizeGraph(0, na);
-
-                    $.each(na, function(i,n) {
-                        equal(0, n.children.length);
-                    });
-
-            });
-            test("randomizeGraph creates fully connected graph for p=1", function() {
-                var na = [
-                        createNode("s"),
-                        createNode("d"),
-                        createNode("1"),
-                        createNode("2"),
-                        createNode("3"),
-                        createNode("4"),
-                        createNode("5"),
-                        createNode("6"),
-                    ];
-                    
-                    randomizeGraph(1, na);
-
-                    $.each(na, function(i,n) {
-                        equal(na.length-1, n.children.length);
-                    });
-
-            });
-            test("allPaths should return single node if src and dest are equal", function () {
-                var n = createNode("s"),
-                    paths;
-
-                paths = allPaths(n, n);
-
-                equal(paths.length, 1);
-                equal(paths[0].toArr().length, 1);
-                equal(paths[0].toArr()[0].name, "s");
-            });
-            test("allPaths should return empty array if no path from src to dest", function() {
-
-                var d = createNode("d"),
-                    n = createNode("s", [
-                          createNode("1"),
-                          createNode("2"),
-                          createNode("3"),
-                        ]),
-                    paths;
-
-                paths = allPaths(n, d);
-
-                equal(paths.length, 0);
-            });
-            test("allPaths handles loops correctly", function() {
-
-                var d = createNode("d"),
-                    n = createNode("s", [
-                          createNode("1", [
-                            createNode("3", [d])
-                          ]),
-                          createNode("2", [
-                            createNode("4", [d])
-                          ]),
-                        ]),
-                    paths;
-
-                // add cycles: 3-2
-                n.children[0].children[0].add(
-                  n.children[1]
-                );
-
-                paths = allPaths(n, d);
-
-                // correct # paths?
-                equal(paths.length, 4);
-
-                // each path starts with 'n' and ends with 'd'?
-                $.each(paths, function(i,p) {
-                    equal('s', p.toArr()[0].name);
-                    equal('d', p.toArr()[ p.toArr().length-1 ].name);
-                });
-            });
-            test("allPaths is symmetric", function() {
-                var d = createNode("d"),
-                    n = createNode("s", [
-                          createNode("1", [
-                            createNode("3", [d])
-                          ]),
-                          createNode("2", [
-                            createNode("4", [d])
-                          ]),
-                        ]);
-
-                // add cycles: 3-2
-                n.children[0].children[0].add(
-                  n.children[1]
-                );
-
-                var paths1 = allPaths(n, d);
-                var paths2 = allPaths(d, n);
-
-                equal(paths1.length, paths2.length);
-
-            });
-            test("shortPaths does not include duplicate edges", function() {
-                var d = createNode("d"),
-                    n = createNode("s", [
-                          createNode("1", [
-                            createNode("2", [d]),
-                            createNode("3", [d])
-                          ])
-                        ]);
-
-                var sp = shortestPaths(n,d);
-
-                equal(1, sp.length);
-
-            });
-        })();
+            }
+        });
     </script>
 </body>
 </html>
